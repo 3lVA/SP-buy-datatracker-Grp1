@@ -1,4 +1,9 @@
 # whatever you add anything here it wont be pushed 
-
+.env
 .env.*
 .csv 
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyd
