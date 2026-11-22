@@ -7,3 +7,10 @@
 __pycache__/
 *.pyc
 *.pyd
+
+# Local Python virtual environment
+.venv/
+
+# Generated Python and notebook files
+__pycache__/
+.ipynb_checkpoints/
