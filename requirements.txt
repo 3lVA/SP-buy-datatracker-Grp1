@@ -1,7 +1,9 @@
-pandas
-numpy
-matplotlib
-seaborn
+pandas 
+numpy 
+argparse
 scikit-learn
+matplotlib 
+seaborn
+xgboost
 mlflow
 skops
