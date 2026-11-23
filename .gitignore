@@ -1,17 +1,13 @@
 # whatever you add anything here it wont be pushed 
 .env
 .env.*
-.csv 
-.venv/
-venv/ 
+*.csv 
 
 # Python cache files
 __pycache__/
 *.pyc
 *.pyd
-base_processed.csv
-
-# MLflow generated files
+.venv/
+mlflow.db*
 mlartifacts/
-mlflow.db/
-
+mlruns/

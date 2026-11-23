@@ -1,7 +1,7 @@
-pandas 
-numpy 
-argparse
-scikit-learn
-matplotlib 
+pandas
+numpy
+matplotlib
 seaborn
-xgboost
+scikit-learn
+mlflow
+skops
