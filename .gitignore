@@ -1,16 +1,13 @@
 # whatever you add anything here it wont be pushed 
 .env
 .env.*
-.csv 
+*.csv 
 
 # Python cache files
 __pycache__/
 *.pyc
 *.pyd
-
-# Local Python virtual environment
 .venv/
-
-# Generated Python and notebook files
-__pycache__/
-.ipynb_checkpoints/
+mlflow.db*
+mlartifacts/
+mlruns/
