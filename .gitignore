@@ -11,3 +11,9 @@ __pycache__/
 mlflow.db*
 mlartifacts/
 mlruns/
+
+# AWS deployment archives
+deploy_mlflow_aws/*.zip
+
+/mlflow-backup.tar.gz
+/mlflow-backup/

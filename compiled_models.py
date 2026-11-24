@@ -55,11 +55,9 @@ from xgboost import XGBClassifier
 # 1. CONFIGURATION
 # ==========================================
 
-MLFLOW_URI = os.getenv("MLFLOW_TRACKING_URI", "http://mlflow-aws-eb-env.eba-6fnta3kf.us-east-1.elasticbeanstalk.com")
+MLFLOW_URI = os.getenv("MLFLOW_TRACKING_URI", "http://mlflow-aws-eb-group1-env.eba-k9axgp3x.us-east-1.elasticbeanstalk.com/")
 EXPERIMENT_NAME = os.getenv("MLFLOW_EXPERIMENT_NAME", "SP-Buy-Fraud-Detection")
-# Leave off while the Elastic Beanstalk proxy rejects large model.pkl files (HTTP 413).
-# Set LOG_MODEL_ARTIFACTS=1 once the server upload limit and storage are fixed.
-LOG_MODEL_ARTIFACTS = os.getenv("LOG_MODEL_ARTIFACTS", "0") == "1"
+LOG_MODEL_ARTIFACTS = os.getenv("LOG_MODEL_ARTIFACTS", "1") == "1"
 
 SEED = 42
 TARGET = "is_fraud"
