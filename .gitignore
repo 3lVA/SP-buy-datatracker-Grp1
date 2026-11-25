@@ -1,19 +1,21 @@
 # whatever you add anything here it wont be pushed 
 .env
 .env.*
-.csv 
-/base_processed.csv
-.venv/
+*.csv 
 
 # Python cache files
 __pycache__/
 *.pyc
 *.pyd
-.ipynb_checkpoints/
-
-# MLflow
+.venv/
+mlflow.db*
 mlartifacts/
-mlflow.db
+mlruns/
 
-# Prefect
-.prefect/
+# AWS deployment archives
+deploy_mlflow_aws/*.zip
+
+/mlflow-backup.tar.gz
+/mlflow-backup/
+# Local MLflow recovery files
+/MLflow-Recovered/
