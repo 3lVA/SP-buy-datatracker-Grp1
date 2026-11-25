@@ -8,3 +8,4 @@ xgboost
 mlflow
 skops
 python-dotenv
+mysql-connector-python
