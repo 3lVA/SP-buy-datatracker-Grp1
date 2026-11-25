@@ -7,3 +7,4 @@ seaborn
 xgboost
 mlflow
 skops
+python-dotenv
