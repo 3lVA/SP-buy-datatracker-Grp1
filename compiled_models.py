@@ -234,8 +234,8 @@ def create_RFC_model():
             (
                 "classifier",
                 RandomForestClassifier(
-                    n_estimators=100,
-                    max_depth=20,
+                    n_estimators=50,
+                    max_depth=12,
                     min_samples_leaf=5,
                     class_weight="balanced",
                     random_state=SEED,
@@ -889,7 +889,7 @@ def train_micole_random_forest(micole_data):
     print("\n========== MICOLE RANDOM FOREST ==========")
 
     skf = StratifiedKFold(
-        n_splits=5,
+        n_splits=3,
         shuffle=True,
         random_state=SEED,
     )
@@ -905,7 +905,7 @@ def train_micole_random_forest(micole_data):
     with mlflow.start_run(
         run_name="Micole_RF_Balanced_Stratif5Fold"
     ):
-        mlflow.set_tags({"team_member": "Micole", "evaluation_group": "micole_shared_stratified", "comparison_batch": COMPARISON_BATCH, "split_design": "stratified_random_dev85_test15_cv5", "controlled_comparison": "false"})
+        mlflow.set_tags({"team_member": "Micole", "evaluation_group": "micole_shared_stratified", "comparison_batch": COMPARISON_BATCH, "split_design": "stratified_random_dev85_test15_cv3", "controlled_comparison": "false"})
 
         rf_model = create_RFC_model()
 
@@ -936,7 +936,7 @@ def train_micole_random_forest(micole_data):
         )
 
         # Log individual folds
-        for i in range(5):
+        for i in range(skf.get_n_splits()):
 
             mlflow.log_metrics(
                 {
@@ -966,13 +966,13 @@ def train_micole_random_forest(micole_data):
                 "test_fraction": 0.15,
                 "stratified": True,
                 "random_state": SEED,
-                "n_splits": 5,
+                "n_splits": skf.get_n_splits(),
                 "training_samples": len(X_dev),
                 "testing_samples": len(X_test),
-                "n_estimators": 100,
-                "max_depth": 20,
-                "min_samples_leaf": 5,
-                "class_weight": "balanced",
+                "n_estimators": rf_model.named_steps["classifier"].n_estimators,
+                "max_depth": rf_model.named_steps["classifier"].max_depth,
+                "min_samples_leaf": rf_model.named_steps["classifier"].min_samples_leaf,
+                "class_weight": rf_model.named_steps["classifier"].class_weight,
             }
         )
 
