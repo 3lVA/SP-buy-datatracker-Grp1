@@ -2,8 +2,18 @@
 .env
 .env.*
 .csv 
+/base_processed.csv
+.venv/
 
 # Python cache files
 __pycache__/
 *.pyc
 *.pyd
+.ipynb_checkpoints/
+
+# MLflow
+mlartifacts/
+mlflow.db
+
+# Prefect
+.prefect/
