@@ -1,16 +1,10 @@
 # MERGED TRAINING SCRIPT — MICOLE + ELVA + JONATHAN
 # ------------------------------------------------------------
 # Usage: python compiled_models_all_members.py
-# One main() coordinates six final model runs across three team members.
-# Only Elva's tuned LR and RF are run; Micole's models and Jonathan's tuning are retained.
-# Original splits, tuning, and evaluation methods are retained.
-# Model-file uploads are opt-in (LOG_MODEL_ARTIFACTS=1). Metrics log by default.
-# No Matplotlib plotting code or GUI calls.
-# Input: base_processed.csv beside this script, or set FRAUD_DATA_PATH.
-# MLflow: set MLFLOW_TRACKING_URI and MLFLOW_EXPERIMENT_NAME to override defaults.
-# NOTE: The workflows use different train/test splits. Their test scores
-# should not be treated as a controlled head-to-head comparison.
-# Full Jonathan tuning can take considerably longer than 3 minutes.
+# File 1: Elva 
+# File 2: Jonathan 
+# File 3: Micole 
+#
 
 
 # ==========================================
