@@ -14,7 +14,8 @@ from tempfile import TemporaryDirectory
 from threading import Event
 from time import monotonic
 
-BUCKET = os.environ.get("MLFLOW_PERSISTENCE_BUCKET", "elasticbeanstalk-us-east-1-910206167566")
+BUCKET = os.environ["MLFLOW_PERSISTENCE_BUCKET"]
+ALLOW_EMPTY_START = os.environ.get("MLFLOW_ALLOW_EMPTY_START", "0") == "1"
 PREFIX = os.environ.get("MLFLOW_PERSISTENCE_PREFIX", "mlflow-backups/group1-auto").strip("/")
 SEED_KEY = os.environ.get("MLFLOW_SEED_KEY", "mlflow-backups/group1-seed.tar.gz")
 REGION = os.environ.get("AWS_DEFAULT_REGION", "us-east-1")
@@ -96,6 +97,17 @@ def restore(s3):
         except Exception as exc:
             if error_code(exc) not in {"NoSuchKey", "404", "NotFound"}:
                 raise
+            if ALLOW_EMPTY_START:
+                # Explicit first-start mode for a new bucket; never use on AccessDenied.
+                subprocess.run(
+                    ["mlflow", "db", "upgrade", f"sqlite:///{pending}"],
+                    check=True,
+                )
+                check_database(pending)
+                etag, digest = publish(s3, pending, None, None)
+                os.replace(pending, DB)
+                LOG.info("Initialised a new MLflow database and saved its first S3 checkpoint")
+                return etag, digest
             seed = seed_from_archive(s3, directory)
             etag, digest = publish(s3, seed, None, None)
             os.replace(seed, DB)
@@ -104,7 +116,7 @@ def restore(s3):
             for chunk in body.iter_chunks():
                 output.write(chunk)
         runs = check_database(pending)
-        if not runs:
+        if not runs and not ALLOW_EMPTY_START:
             raise ValueError("S3 snapshot shows no runs; refusing to start with an empty database")
         LOG.info("Restored %d runs from S3", runs)
         with pending.open("rb") as source:
