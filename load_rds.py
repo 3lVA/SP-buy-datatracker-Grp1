@@ -9,6 +9,10 @@ import pandas as pd
 
 from data_cleaning import clean_batch, load_batch
 
+from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parent / ".env")
 
 # =====================================================
 # Define database columns

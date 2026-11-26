@@ -131,8 +131,8 @@ def create_XGB_model():
 
 def create_RFC_model():
     rf = RandomForestClassifier(
-        n_estimators=100,
-        max_depth=20,
+        n_estimators=50,
+        max_depth=12,
         min_samples_leaf=5,
         class_weight="balanced",
         random_state=42,
@@ -149,7 +149,7 @@ def create_RFC_model():
 
 def createStratifiedKFold():
     return StratifiedKFold(
-        n_splits=5,
+        n_splits=3,
         shuffle=True,
         random_state=42
     )
@@ -311,7 +311,7 @@ with mlflow.start_run(
 
     rf_model = create_RFC_model()
 
-    # Perform 5-fold cross-validation
+    # Perform 3-fold cross-validation
     cv_results = cross_validate(
         rf_model,
         X_dev,
@@ -342,15 +342,15 @@ with mlflow.start_run(
     mlflow.log_params({
         "model_type": "RandomForest",
         "split_method": "stratified_kfold",
-        "n_splits": 5,
+        "n_splits": 3,
         "training_fraction": 0.85,
         "test_fraction": 0.15,
         "stratified": True,
         "random_state": 42,
         "training_samples": len(X_dev),
         "testing_samples": len(X_test),
-        "n_estimators": 100,
-        "max_depth": 20,
+        "n_estimators": 50,
+        "max_depth": 12,
         "min_samples_leaf": 5,
         "class_weight": "balanced"
     })

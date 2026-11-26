@@ -13,16 +13,20 @@ from pipelines.data_preparation import build_order_features
 from pipelines.database import read_labelled_history
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-TEAM_TRACKING_URI = "http://mlflow-aws-eb-group1-env.eba-k9axgp3x.us-east-1.elasticbeanstalk.com"
 TEAM_EXPERIMENT = "SP-Buy-Fraud-Detection"
 
 
 def resolve_trainer():
+    from compiled_models import validate_tracking_uri
+
+    validate_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "").strip())
+    if os.getenv("LOG_MODEL_ARTIFACTS", "0").strip() not in {"0", "1"}:
+        raise ValueError("LOG_MODEL_ARTIFACTS must be 0 or 1")
     trainer = Path(os.getenv("MLFLOW_TRAINER_PATH", str(PROJECT_ROOT / "compiled_models.py")))
     if not trainer.is_file():
         raise FileNotFoundError(
-            "The MLflow trainer is missing. Merge the mlflow branch, or set "
-            "MLFLOW_TRAINER_PATH to an unchanged copy of compiled_models.py. "
+            "The MLflow trainer is missing. Set "
+            "MLFLOW_TRAINER_PATH to the team runner compiled_models.py. "
             "Use retrain=false to load data only."
         )
     return trainer.resolve()
@@ -49,10 +53,11 @@ def retrain_history(flow_run_id, logger):
 
         environment = os.environ.copy()
         environment.update(
+            TRAINING_PROJECT_ROOT=str(PROJECT_ROOT),
             FRAUD_DATA_PATH=str(snapshot),
             FRAUD_ETL_RUN_ID=flow_run_id,
             FRAUD_DATA_SHA256=fingerprint,
-            MLFLOW_TRACKING_URI=os.getenv("MLFLOW_TRACKING_URI", TEAM_TRACKING_URI),
+            MLFLOW_TRACKING_URI=os.environ["MLFLOW_TRACKING_URI"].strip(),
             MLFLOW_EXPERIMENT_NAME=os.getenv("MLFLOW_EXPERIMENT_NAME", TEAM_EXPERIMENT),
             FRAUD_TRAINING_ROWS=str(len(features)),
             LOG_MODEL_ARTIFACTS=os.getenv("LOG_MODEL_ARTIFACTS", "0"),

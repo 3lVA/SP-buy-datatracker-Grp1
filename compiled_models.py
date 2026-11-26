@@ -1,6 +1,6 @@
 # MERGED TRAINING SCRIPT — MICOLE + ELVA + JONATHAN
 # ------------------------------------------------------------
-# Usage: python compiled_models_all_members.py
+# Usage: python compiled_models.py [--check-config]
 # File 1: Elva 
 # File 2: Jonathan 
 # File 3: Micole 
@@ -12,6 +12,9 @@
 # ==========================================
 
 import os
+import argparse
+from urllib.parse import urlsplit
+from dotenv import load_dotenv
 from pathlib import Path
 from uuid import uuid4
 
@@ -49,16 +52,26 @@ from xgboost import XGBClassifier
 # 1. CONFIGURATION
 # ==========================================
 
-MLFLOW_URI = os.getenv("MLFLOW_TRACKING_URI", "http://mlflow-aws-eb-group1-env.eba-k9axgp3x.us-east-1.elasticbeanstalk.com/")
-EXPERIMENT_NAME = os.getenv("MLFLOW_EXPERIMENT_NAME", "SP-Buy-Fraud-Detection")
-LOG_MODEL_ARTIFACTS = os.getenv("LOG_MODEL_ARTIFACTS", "1") == "1"
+# ETL passes the project root when it runs a temporary copy of this file.
+PROJECT_ROOT = Path(os.getenv("TRAINING_PROJECT_ROOT", str(Path(__file__).resolve().parent))).resolve()
+load_dotenv(PROJECT_ROOT / ".env", override=False)
+
+MLFLOW_URI = os.getenv("MLFLOW_TRACKING_URI", "").strip()
+EXPERIMENT_NAME = os.getenv("MLFLOW_EXPERIMENT_NAME", "SP-Buy-Fraud-Detection").strip()
+LOG_MODEL_ARTIFACTS = os.getenv("LOG_MODEL_ARTIFACTS", "1").strip() == "1"
 
 SEED = 42
 TARGET = "is_fraud"
 # Identifies runs produced by the same invocation for MLflow comparison.
 COMPARISON_BATCH = uuid4().hex
 
-DATA_PATH = Path(os.getenv("FRAUD_DATA_PATH", str(Path(__file__).with_name("base_processed.csv"))))
+DATA_PATH = Path(os.getenv("FRAUD_DATA_PATH", "data/base_processed.csv")).expanduser()
+if not DATA_PATH.is_absolute():
+    DATA_PATH = PROJECT_ROOT / DATA_PATH
+
+OUTPUT_DIR = Path(os.getenv("TRAINING_OUTPUT_DIR", "training_results")).expanduser()
+if not OUTPUT_DIR.is_absolute():
+    OUTPUT_DIR = PROJECT_ROOT / OUTPUT_DIR
 
 
 # ==========================================
@@ -86,11 +99,40 @@ FEATURES = NUMERICAL_FEATURES + CATEGORICAL_FEATURES
 # 3. MLFLOW CONFIGURATION
 # ==========================================
 
+def validate_tracking_uri(tracking_uri):
+    if not tracking_uri:
+        raise ValueError("Set MLFLOW_TRACKING_URI in the project .env or process environment")
+    # SQLite is also supported for isolated local verification without AWS.
+    try:
+        parsed = urlsplit(tracking_uri)
+        valid = parsed.scheme in {"http", "https"} and bool(parsed.hostname)
+        if parsed.scheme in {"http", "https"}:
+            _ = parsed.port
+            valid = valid and not (parsed.username or parsed.password or parsed.query or parsed.fragment)
+        valid = valid or tracking_uri.startswith("sqlite:///")
+    except ValueError:
+        valid = False
+    if not valid:
+        raise ValueError("MLFLOW_TRACKING_URI must be an HTTP(S) server URL without embedded credentials, or a local sqlite:/// URI")
+    return tracking_uri
+
+
+def validate_configuration():
+    """Check settings before training without displaying credential values."""
+    validate_tracking_uri(MLFLOW_URI)
+    if os.getenv("LOG_MODEL_ARTIFACTS", "1").strip() not in {"0", "1"}:
+        raise ValueError("LOG_MODEL_ARTIFACTS must be 0 or 1")
+    if not EXPERIMENT_NAME:
+        raise ValueError("MLFLOW_EXPERIMENT_NAME must not be empty")
+    if not DATA_PATH.is_file():
+        raise FileNotFoundError("Training CSV not found; set FRAUD_DATA_PATH to an existing processed dataset")
+
+
+
 def configure_mlflow():
     mlflow.set_tracking_uri(MLFLOW_URI)
     mlflow.set_experiment(EXPERIMENT_NAME)
 
-    print("MLflow URI:", mlflow.get_tracking_uri())
     print("MLflow experiment:", EXPERIMENT_NAME)
 
 
@@ -903,7 +945,7 @@ def train_micole_random_forest(micole_data):
     }
 
     with mlflow.start_run(
-        run_name="Micole_RF_Balanced_Stratif5Fold"
+        run_name="Micole_RF_Balanced_Stratif3Fold"
     ):
         mlflow.set_tags({"team_member": "Micole", "evaluation_group": "micole_shared_stratified", "comparison_batch": COMPARISON_BATCH, "split_design": "stratified_random_dev85_test15_cv3", "controlled_comparison": "false"})
 
@@ -1017,7 +1059,7 @@ def train_micole_random_forest(micole_data):
 
         comparison.append(
             {
-                "model": "RF_Balanced_Stratif5Fold",
+                "model": "RF_Balanced_Stratif3Fold",
                 **{
                     f"test_{key}": value
                     for key, value in rf_test_metrics.items()
@@ -1067,7 +1109,7 @@ def prepare_jonathan_context():
     from xgboost.callback import EarlyStopping
 
 
-    DATA_PATH = Path(os.getenv("FRAUD_DATA_PATH", str(Path(__file__).with_name("base_processed.csv"))))
+    # Use the shared DATA_PATH configured above.
 
     SEED = 42
     DEFAULT_THRESHOLD = 0.5
@@ -1683,7 +1725,8 @@ def compare_original_experiments():
     })
     # All original member runs; no benchmark copies are added.
     report = report.sort_values(["member", "run_name"], na_position="last")
-    report_path = Path(__file__).with_name("original_split_model_comparison.csv")
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    report_path = OUTPUT_DIR / "original_split_model_comparison.csv"
     report.to_csv(report_path, index=False)
     show = ["member", "run_name", "split_design", "validation_f1", "test_f1", "test_recall", "test_average_precision", "test_fn"]
     print("\n=== ORIGINAL SPLITS — DESCRIPTIVE COMPARISON ===")
@@ -1704,6 +1747,7 @@ def compare_original_experiments():
 # SINGLE ENTRY POINT: ALL THREE TEAM MEMBERS
 # ============================================================
 def main():
+    validate_configuration()
     if not DATA_PATH.is_file():
         raise FileNotFoundError(
             f"Dataset not found: {DATA_PATH}. "
