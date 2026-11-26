@@ -1,6 +1,5 @@
 pandas 
 numpy 
-argparse
 scikit-learn
 matplotlib 
 seaborn
@@ -9,3 +8,4 @@ mlflow
 skops
 python-dotenv
 mysql-connector-python
+threadpoolctl
