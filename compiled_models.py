@@ -276,8 +276,8 @@ def create_RFC_model():
             (
                 "classifier",
                 RandomForestClassifier(
-                    n_estimators=100,
-                    max_depth=20,
+                    n_estimators=50,
+                    max_depth=12,
                     min_samples_leaf=5,
                     class_weight="balanced",
                     random_state=SEED,
@@ -931,7 +931,7 @@ def train_micole_random_forest(micole_data):
     print("\n========== MICOLE RANDOM FOREST ==========")
 
     skf = StratifiedKFold(
-        n_splits=5,
+        n_splits=3,
         shuffle=True,
         random_state=SEED,
     )
@@ -945,9 +945,9 @@ def train_micole_random_forest(micole_data):
     }
 
     with mlflow.start_run(
-        run_name="Micole_RF_Balanced_Stratif5Fold"
+        run_name="Micole_RF_Balanced_Stratif3Fold"
     ):
-        mlflow.set_tags({"team_member": "Micole", "evaluation_group": "micole_shared_stratified", "comparison_batch": COMPARISON_BATCH, "split_design": "stratified_random_dev85_test15_cv5", "controlled_comparison": "false"})
+        mlflow.set_tags({"team_member": "Micole", "evaluation_group": "micole_shared_stratified", "comparison_batch": COMPARISON_BATCH, "split_design": "stratified_random_dev85_test15_cv3", "controlled_comparison": "false"})
 
         rf_model = create_RFC_model()
 
@@ -1059,7 +1059,7 @@ def train_micole_random_forest(micole_data):
 
         comparison.append(
             {
-                "model": "RF_Balanced_Stratif5Fold",
+                "model": "RF_Balanced_Stratif3Fold",
                 **{
                     f"test_{key}": value
                     for key, value in rf_test_metrics.items()
