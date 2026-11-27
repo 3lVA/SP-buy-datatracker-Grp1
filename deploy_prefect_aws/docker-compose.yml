@@ -1,0 +1,20 @@
+services:
+  prefect:
+    build: .
+    env_file: .env
+    restart: unless-stopped
+
+  proxy:
+    image: caddy:2.11.4-alpine
+    environment:
+      PREFECT_PUBLIC_HOST: ${PREFECT_PUBLIC_HOST:?Set the public Prefect host}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    restart: unless-stopped
+
+volumes:
+  caddy_data:

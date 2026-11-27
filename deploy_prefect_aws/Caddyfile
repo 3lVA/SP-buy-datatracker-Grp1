@@ -1,0 +1,23 @@
+{
+	auto_https disable_redirects
+	default_sni {$PREFECT_PUBLIC_HOST}
+}
+
+https://{$PREFECT_PUBLIC_HOST} {
+	tls {
+		issuer acme {
+			profile shortlived
+			disable_http_challenge
+		}
+	}
+	reverse_proxy prefect:4200
+}
+
+http:// {
+	handle /api/health {
+		reverse_proxy prefect:4200
+	}
+	handle {
+		redir https://{$PREFECT_PUBLIC_HOST}{uri} 308
+	}
+}
