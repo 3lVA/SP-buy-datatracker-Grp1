@@ -379,7 +379,8 @@ def run_experiment(
                 f"The {name} partition must contain both classes."
             )
 
-    with mlflow.start_run(run_name="Elva_" + run_name):
+    model_name = "Elva_" + run_name
+    with mlflow.start_run(run_name=model_name):
         mlflow.set_tags({"team_member": "Elva", "evaluation_group": "elva_lr_stratified" if use_kfold else "elva_rf_chronological", "comparison_batch": COMPARISON_BATCH, "split_design": "stratified_random_70_15_15" if use_kfold else "chronological_rows_70_15_15", "controlled_comparison": "false"})
 
         classifier = model.named_steps["classifier"]
@@ -575,7 +576,7 @@ def run_experiment(
 
         log_sklearn_model(
             model,
-            "model",
+            model_name,
             X_train,
             [
                 "numpy.dtype",
@@ -622,7 +623,8 @@ def run_file3_experiment(
     trusted_types,
 ):
 
-    with mlflow.start_run(run_name="Micole_" + run_name):
+    model_name = "Micole_" + run_name
+    with mlflow.start_run(run_name=model_name):
         mlflow.set_tags({"team_member": "Micole", "evaluation_group": "micole_shared_stratified", "comparison_batch": COMPARISON_BATCH, "split_design": "stratified_random_70_15_15", "controlled_comparison": "false"})
 
         model.fit(X_train, y_train)
@@ -686,7 +688,7 @@ def run_file3_experiment(
         # Log fitted model
         log_sklearn_model(
             model,
-            "model",
+            model_name,
             X_train,
             trusted_types,
         )
@@ -936,58 +938,50 @@ def train_micole_random_forest(micole_data):
         random_state=SEED,
     )
 
-    scoring = {
-        "accuracy": "accuracy",
-        "precision": "precision",
-        "recall": "recall",
-        "f1": "f1",
-        "roc_auc": "roc_auc",
-    }
+    def score_fold(model, X_val, y_val):
+        metrics, _ = evaluate_model(model, X_val, y_val)
+        return metrics
 
-    with mlflow.start_run(
-        run_name="Micole_RF_Balanced_Stratif3Fold"
-    ):
+    model_name = "Micole_RF_Balanced_Stratif3Fold"
+    with mlflow.start_run(run_name=model_name):
         mlflow.set_tags({"team_member": "Micole", "evaluation_group": "micole_shared_stratified", "comparison_batch": COMPARISON_BATCH, "split_design": "stratified_random_dev85_test15_cv3", "controlled_comparison": "false"})
 
         rf_model = create_RFC_model()
 
-        # Original CV on the full 85% development set.
+        # Each development row is evaluated once, in its held-out fold.
         cv_results = cross_validate(
             rf_model,
             X_dev,
             y_dev,
             cv=skf,
-            scoring=scoring,
+            scoring=score_fold,
             n_jobs=1,
         )
 
-        # Calculate mean CV metrics
-        cv_metrics = {
-            metric: float(
-                np.mean(cv_results[f"test_{metric}"])
-            )
-            for metric in scoring
+        fold_scores = {
+            key.removeprefix("test_"): scores
+            for key, scores in cv_results.items()
+            if key.startswith("test_")
         }
+        count_keys = ("tn", "fp", "fn", "tp")
+        cv_metrics = {
+            key: float(np.mean(scores))
+            for key, scores in fold_scores.items()
+            if key not in count_keys
+        }
+        validation_counts = {key: int(fold_scores[key].sum()) for key in count_keys}
+        mlflow.log_metrics({
+            **{f"cv_{key}": value for key, value in cv_metrics.items()},
+            **{f"validation_{key}": value for key, value in cv_metrics.items()},
+            **{f"validation_{key}": value for key, value in validation_counts.items()},
+            "validation_flagged_rate": (validation_counts["tp"] + validation_counts["fp"]) / len(y_dev),
+        })
 
-        # Log CV metrics
-        mlflow.log_metrics(
-            {
-                f"cv_{key}": value
-                for key, value in cv_metrics.items()
-            }
-        )
-
-        # Log individual folds
         for i in range(skf.get_n_splits()):
-
-            mlflow.log_metrics(
-                {
-                    f"fold_{i+1}_{metric}": float(
-                        cv_results[f"test_{metric}"][i]
-                    )
-                    for metric in scoring
-                }
-            )
+            mlflow.log_metrics({
+                f"fold_{i + 1}_{key}": float(fold_scores[key][i])
+                for key in cv_metrics
+            })
 
         # Original final fit on full 85% development set
         rf_model.fit(X_dev, y_dev)
@@ -1039,7 +1033,7 @@ def train_micole_random_forest(micole_data):
         # Log fitted model
         log_sklearn_model(
             rf_model,
-            "model",
+            model_name,
             X_dev,
             [
                 "numpy.dtype",
@@ -1561,7 +1555,8 @@ def prepare_jonathan_context():
             params[f"{split}_start"] = str(part["order_date"].min().date())
             params[f"{split}_end"] = str(part["order_date"].max().date())
 
-        with mlflow.start_run(run_name=f"Jonathan_{name.replace(' ', '_')}_Chronological_Holdout") as run:
+        model_name = f"Jonathan_{name.replace(' ', '_')}_Chronological_Holdout"
+        with mlflow.start_run(run_name=model_name) as run:
             mlflow.set_tags({
                 "dataset": DATA_PATH.name,
                 "comparison_id": comparison_id,
@@ -1598,7 +1593,7 @@ def prepare_jonathan_context():
                 sample = parts["validation"][FEATURES].head(20)
                 signature = infer_signature(sample, serving_model.predict(None, sample))
                 model_info = mlflow.pyfunc.log_model(
-                    name="fraud_model",
+                    name=model_name,
                     python_model=serving_model,
                     signature=signature,
                     pip_requirements=model_requirements(name),

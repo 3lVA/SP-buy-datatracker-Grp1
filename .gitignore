@@ -19,3 +19,5 @@ deploy_mlflow_aws/*.zip
 /mlflow-backup/
 # Local MLflow recovery files
 /MLflow-Recovered/
+
+/deploy_prefect_aws/*.zip

@@ -20,8 +20,6 @@ def resolve_trainer():
     from compiled_models import validate_tracking_uri
 
     validate_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "").strip())
-    if os.getenv("LOG_MODEL_ARTIFACTS", "0").strip() not in {"0", "1"}:
-        raise ValueError("LOG_MODEL_ARTIFACTS must be 0 or 1")
     trainer = Path(os.getenv("MLFLOW_TRAINER_PATH", str(PROJECT_ROOT / "compiled_models.py")))
     if not trainer.is_file():
         raise FileNotFoundError(
@@ -60,7 +58,8 @@ def retrain_history(flow_run_id, logger):
             MLFLOW_TRACKING_URI=os.environ["MLFLOW_TRACKING_URI"].strip(),
             MLFLOW_EXPERIMENT_NAME=os.getenv("MLFLOW_EXPERIMENT_NAME", TEAM_EXPERIMENT),
             FRAUD_TRAINING_ROWS=str(len(features)),
-            LOG_MODEL_ARTIFACTS=os.getenv("LOG_MODEL_ARTIFACTS", "0"),
+            # ETL retrains the team models and records metrics without publishing new MLflow models.
+            LOG_MODEL_ARTIFACTS="0",
             PYTHONIOENCODING="utf-8",
         )
         logger.info("Training all six models on %s labelled orders. MLflow etl_run_id: %s", f"{len(features):,}", flow_run_id)
